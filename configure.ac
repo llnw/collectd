@@ -1368,9 +1368,9 @@ fi
 m4_divert_once([HELP_WITH], [
 collectd additional packages:])
 
-AM_CONDITIONAL([BUILD_FREEBSD],[test "x$x$ac_system" = "xFreeBSD"])
+AM_CONDITIONAL([BUILD_FREEBSD],[test "x$ac_system" = "xFreeBSD"])
 
-AM_CONDITIONAL([BUILD_AIX],[test "x$x$ac_system" = "xAIX"]) 
+AM_CONDITIONAL([BUILD_AIX],[test "x$ac_system" = "xAIX"]) 
 
 if test "x$ac_system" = "xAIX"
 then
@@ -4797,6 +4797,7 @@ collectd features:])
 AC_COLLECTD([debug],     [enable],  [feature], [debugging])
 AC_COLLECTD([daemon],    [disable], [feature], [daemon mode])
 AC_COLLECTD([getifaddrs],[enable],  [feature], [getifaddrs under Linux])
+AC_COLLECTD([ipv6],      [enable],  [feature], [enable IPV6 for netstat])
 
 dependency_warning="no"
 dependency_error="no"
@@ -4901,7 +4902,8 @@ fi
 
 if test "x$ac_system" = "xFreeBSD"
 then
-        plugin_zfs_arc="yes"
+	plugin_disk="yes"
+	plugin_zfs_arc="yes"
 fi
 
 
@@ -5181,6 +5183,7 @@ AC_PLUGIN([multimeter],  [$plugin_multimeter], [Read multimeter values])
 AC_PLUGIN([mysql],       [$with_libmysql],     [MySQL statistics])
 AC_PLUGIN([netapp],      [$with_libnetapp],    [NetApp plugin])
 AC_PLUGIN([netlink],     [$with_libmnl],       [Enhanced Linux network statistics])
+AC_PLUGIN([netstat],     [yes],                [Netstat plugin])
 AC_PLUGIN([network],     [yes],                [Network communication plugin])
 AC_PLUGIN([nfs],         [$plugin_nfs],        [NFS statistics])
 AC_PLUGIN([nginx],       [$with_libcurl],      [nginx statistics])
@@ -5242,6 +5245,7 @@ AC_PLUGIN([write_http],  [$with_libcurl],      [HTTP output plugin])
 AC_PLUGIN([write_mongodb], [$with_libmongoc],  [MongoDB output plugin])
 AC_PLUGIN([write_redis], [$with_libcredis],    [Redis output plugin])
 AC_PLUGIN([write_riemann], [$have_protoc_c],   [Riemann output plugin])
+AC_PLUGIN([write_tsdb],  [yes],                [TSDB output plugin])
 AC_PLUGIN([xmms],        [$with_libxmms],      [XMMS statistics])
 AC_PLUGIN([zfs_arc],     [$plugin_zfs_arc],    [ZFS ARC statistics])
 
@@ -5463,6 +5467,7 @@ Configuration:
   Features:
     daemon mode . . . . . $enable_daemon
     debug . . . . . . . . $enable_debug
+    ipv6  . . . . . . . . $enable_ipv6
 
   Bindings:
     perl  . . . . . . . . $with_perl_bindings
@@ -5526,6 +5531,7 @@ Configuration:
     mysql . . . . . . . . $enable_mysql
     netapp  . . . . . . . $enable_netapp
     netlink . . . . . . . $enable_netlink
+    netstat . . . . . . . $enable_netstat
     network . . . . . . . $enable_network
     nfs . . . . . . . . . $enable_nfs
     nginx . . . . . . . . $enable_nginx
@@ -5586,6 +5592,7 @@ Configuration:
     write_mongodb . . . . $enable_write_mongodb
     write_redis . . . . . $enable_write_redis
     write_riemann . . . . $enable_write_riemann
+    write_tsdb  . . . . . $enable_write_tsdb
     xmms  . . . . . . . . $enable_xmms
     zfs_arc . . . . . . . $enable_zfs_arc
 

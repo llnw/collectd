@@ -385,6 +385,9 @@ if BUILD_WITH_LIBSTATGRAB
 disk_la_CFLAGS += $(BUILD_WITH_LIBSTATGRAB_CFLAGS)  
 disk_la_LIBADD += $(BUILD_WITH_LIBSTATGRAB_LDFLAGS)
 endif
+if BUILD_FREEBSD
+disk_la_LIBADD += -ldevstat -lkvm -lgeom -lbsdxml -lsbuf
+endif
 if BUILD_WITH_PERFSTAT
 disk_la_LIBADD += -lperfstat
 endif
@@ -758,6 +761,14 @@ netlink_la_CFLAGS = $(AM_CFLAGS) $(BUILD_WITH_LIBMNL_CFLAGS)
 netlink_la_LIBADD = $(BUILD_WITH_LIBMNL_LIBS)
 collectd_LDADD += "-dlopen" netlink.la
 collectd_DEPENDENCIES += netlink.la
+endif
+
+if BUILD_PLUGIN_NETSTAT
+pkglib_LTLIBRARIES += netstat.la
+netstat_la_SOURCES = netstat.c
+netstat_la_LDFLAGS = -module -avoid-version
+collectd_LDADD += "-dlopen" netstat.la
+collectd_DEPENDENCIES += netstat.la
 endif
 
 if BUILD_PLUGIN_NETWORK
@@ -1415,6 +1426,14 @@ write_riemann_la_LDFLAGS = -module -avoid-version
 write_riemann_la_LIBADD = -lprotobuf-c
 collectd_LDADD += "-dlopen" write_riemann.la
 collectd_DEPENDENCIES += write_riemann.la
+endif
+
+if BUILD_PLUGIN_WRITE_TSDB
+pkglib_LTLIBRARIES += write_tsdb.la
+write_tsdb_la_SOURCES = write_tsdb.c
+write_tsdb_la_LDFLAGS = -module -avoid-version
+collectd_LDADD += "-dlopen" write_tsdb.la
+collectd_DEPENDENCIES += write_tsdb.la
 endif
 
 if BUILD_PLUGIN_XMMS
