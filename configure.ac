@@ -1368,7 +1368,7 @@ fi
 m4_divert_once([HELP_WITH], [
 collectd additional packages:])
 
-AM_CONDITIONAL([BUILD_FREEBSD],[test "x$x$ac_system" = "xFreeBSD"])
+AM_CONDITIONAL([BUILD_FREEBSD],[test "x$ac_system" = "xFreeBSD"])
 
 AM_CONDITIONAL([BUILD_AIX],[test "x$x$ac_system" = "xAIX"]) 
 
@@ -4901,7 +4901,8 @@ fi
 
 if test "x$ac_system" = "xFreeBSD"
 then
-        plugin_zfs_arc="yes"
+	plugin_disk="yes"
+	plugin_zfs_arc="yes"
 fi
 
 
