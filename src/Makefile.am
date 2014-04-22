@@ -916,8 +916,8 @@ perl_la_CFLAGS  = $(AM_CFLAGS) \
 if HAVE_BROKEN_PERL_LOAD_MODULE
 perl_la_CFLAGS += -Wno-nonnull
 endif
-perl_la_LDFLAGS = -module -avoid-version \
-		$(PERL_LDFLAGS)
+perl_la_LDFLAGS = -module -avoid-version
+perl_la_LIBADD = $(PERL_LIBS)
 collectd_LDADD += "-dlopen" perl.la
 collectd_DEPENDENCIES += perl.la
 endif
