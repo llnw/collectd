@@ -760,6 +760,14 @@ collectd_LDADD += "-dlopen" netlink.la
 collectd_DEPENDENCIES += netlink.la
 endif
 
+if BUILD_PLUGIN_NETSTAT
+pkglib_LTLIBRARIES += netstat.la
+netstat_la_SOURCES = netstat.c
+netstat_la_LDFLAGS = -module -avoid-version
+collectd_LDADD += "-dlopen" netstat.la
+collectd_DEPENDENCIES += netstat.la
+endif
+
 if BUILD_PLUGIN_NETWORK
 pkglib_LTLIBRARIES += network.la
 network_la_SOURCES = network.c network.h \

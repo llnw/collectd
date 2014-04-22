@@ -4797,6 +4797,7 @@ collectd features:])
 AC_COLLECTD([debug],     [enable],  [feature], [debugging])
 AC_COLLECTD([daemon],    [disable], [feature], [daemon mode])
 AC_COLLECTD([getifaddrs],[enable],  [feature], [getifaddrs under Linux])
+AC_COLLECTD([ipv6],      [enable],  [feature], [enable IPV6 for netstat])
 
 dependency_warning="no"
 dependency_error="no"
@@ -5181,6 +5182,7 @@ AC_PLUGIN([multimeter],  [$plugin_multimeter], [Read multimeter values])
 AC_PLUGIN([mysql],       [$with_libmysql],     [MySQL statistics])
 AC_PLUGIN([netapp],      [$with_libnetapp],    [NetApp plugin])
 AC_PLUGIN([netlink],     [$with_libmnl],       [Enhanced Linux network statistics])
+AC_PLUGIN([netstat],     [yes],                [Netstat plugin])
 AC_PLUGIN([network],     [yes],                [Network communication plugin])
 AC_PLUGIN([nfs],         [$plugin_nfs],        [NFS statistics])
 AC_PLUGIN([nginx],       [$with_libcurl],      [nginx statistics])
@@ -5463,6 +5465,7 @@ Configuration:
   Features:
     daemon mode . . . . . $enable_daemon
     debug . . . . . . . . $enable_debug
+    ipv6  . . . . . . . . $enable_ipv6
 
   Bindings:
     perl  . . . . . . . . $with_perl_bindings
@@ -5526,6 +5529,7 @@ Configuration:
     mysql . . . . . . . . $enable_mysql
     netapp  . . . . . . . $enable_netapp
     netlink . . . . . . . $enable_netlink
+    netstat . . . . . . . $enable_netstat
     network . . . . . . . $enable_network
     nfs . . . . . . . . . $enable_nfs
     nginx . . . . . . . . $enable_nginx
