@@ -57,6 +57,8 @@ struct riemann_host {
 
 static char	**riemann_tags;
 static size_t	  riemann_tags_num;
+static char	**riemann_attrs;
+static size_t     riemann_attrs_num;
 
 static void riemann_event_protobuf_free (Event *event) /* {{{ */
 {
@@ -178,32 +180,30 @@ riemann_disconnect (struct riemann_host *host)
 	return (0);
 }
 
-static int
-riemann_send(struct riemann_host *host, Msg const *msg)
+static inline int
+riemann_send_msg(struct riemann_host *host, const Msg *msg)
 {
-	u_char *buffer;
+	int status = 0;
+	u_char *buffer = NULL;
 	size_t  buffer_len;
-	int status;
-
-	pthread_mutex_lock (&host->lock);
 
 	status = riemann_connect (host);
+
 	if (status != 0)
-	{
-		pthread_mutex_unlock (&host->lock);
 		return status;
-	}
 
 	buffer_len = msg__get_packed_size(msg);
+
 	if (host->use_tcp)
 		buffer_len += 4;
 
 	buffer = malloc (buffer_len);
+
 	if (buffer == NULL) {
-		pthread_mutex_unlock (&host->lock);
 		ERROR ("write_riemann plugin: malloc failed.");
 		return ENOMEM;
 	}
+
 	memset (buffer, 0, buffer_len);
 
 	if (host->use_tcp)
@@ -218,23 +218,102 @@ riemann_send(struct riemann_host *host, Msg const *msg)
 	}
 
 	status = (int) swrite (host->s, buffer, buffer_len);
+
 	if (status != 0)
 	{
 		char errbuf[1024];
-
-		riemann_disconnect (host);
-		pthread_mutex_unlock (&host->lock);
 
 		ERROR ("write_riemann plugin: Sending to Riemann at %s:%s failed: %s",
 				(host->node != NULL) ? host->node : RIEMANN_HOST,
 				(host->service != NULL) ? host->service : RIEMANN_PORT,
 				sstrerror (errno, errbuf, sizeof (errbuf)));
+
 		sfree (buffer);
 		return -1;
 	}
 
-	pthread_mutex_unlock (&host->lock);
 	sfree (buffer);
+	return 0;
+}
+
+static inline int
+riemann_recv_ack(struct riemann_host *host)
+{
+	int status = 0;
+	Msg *msg = NULL;
+	uint32_t header;
+
+	status = (int) sread (host->s, &header, 4);
+
+	if (status != 0)
+		return -1;
+
+	size_t size = ntohl(header);
+
+	// Buffer on the stack since acknowledges are typically small.
+	u_char buffer[size];
+	memset (buffer, 0, size);
+
+	status = (int) sread (host->s, buffer, size);
+
+	if (status != 0)
+		return status;
+
+	msg = msg__unpack (NULL, size, buffer);
+
+	if (msg == NULL)
+		return -1;
+
+	if (!msg->ok)
+	{
+		ERROR ("write_riemann plugin: Sending to Riemann at %s:%s acknowledgement message reported error: %s",
+				(host->node != NULL) ? host->node : RIEMANN_HOST,
+				(host->service != NULL) ? host->service : RIEMANN_PORT,
+				msg->error);
+
+		msg__free_unpacked(msg, NULL);
+		return -1;
+	}
+
+	msg__free_unpacked (msg, NULL);
+	return 0;
+}
+
+/**
+ * Function to send messages (Msg) to riemann.
+ *
+ * Acquires the host lock, disconnects on errors.
+ */
+static int
+riemann_send(struct riemann_host *host, Msg const *msg)
+{
+	int status = 0;
+	pthread_mutex_lock (&host->lock);
+
+	status = riemann_send_msg(host, msg);
+
+	if (status != 0) {
+		riemann_disconnect (host);
+		pthread_mutex_unlock (&host->lock);
+		return status;
+	}
+
+	/*
+	 * For TCP we need to receive message acknowledgemenent.
+	 */
+	if (host->use_tcp)
+	{
+		status = riemann_recv_ack(host);
+
+		if (status != 0)
+		{
+			riemann_disconnect (host);
+			pthread_mutex_unlock (&host->lock);
+			return status;
+		}
+	}
+
+	pthread_mutex_unlock (&host->lock);
 	return 0;
 }
 
@@ -345,6 +424,11 @@ static Msg *riemann_notification_to_protobuf (struct riemann_host *host, /* {{{ 
 		riemann_event_add_attribute (event, "type_instance",
 				n->type_instance);
 
+	for (i = 0; i < riemann_attrs_num; i += 2)
+		riemann_event_add_attribute(event,
+					    riemann_attrs[i],
+					    riemann_attrs[i +1]);
+
 	for (i = 0; i < riemann_tags_num; i++)
 		riemann_event_add_tag (event, riemann_tags[i]);
 
@@ -353,15 +437,20 @@ static Msg *riemann_notification_to_protobuf (struct riemann_host *host, /* {{{ 
 			n->type, n->type_instance);
 	event->service = strdup (&service_buffer[1]);
 
-	/* Pull in values from threshold */
+	/* Pull in values from threshold and add extra attributes */
 	for (meta = n->meta; meta != NULL; meta = meta->next)
 	{
-		if (strcasecmp ("CurrentValue", meta->name) != 0)
+		if (strcasecmp ("CurrentValue", meta->name) == 0 && meta->type == NM_TYPE_DOUBLE)
+		{
+			event->metric_d = meta->nm_value.nm_double;
+			event->has_metric_d = 1;
 			continue;
+		}
 
-		event->metric_d = meta->nm_value.nm_double;
-		event->has_metric_d = 1;
-		break;
+		if (meta->type == NM_TYPE_STRING) {
+			riemann_event_add_attribute (event, meta->name, meta->nm_value.nm_string);
+			continue;
+		}
 	}
 
 	DEBUG ("write_riemann plugin: Successfully created protobuf for notification: "
@@ -428,6 +517,11 @@ static Event *riemann_value_to_protobuf (struct riemann_host const *host, /* {{{
 		ssnprintf (ds_index, sizeof (ds_index), "%zu", index);
 		riemann_event_add_attribute (event, "ds_index", ds_index);
 	}
+
+	for (i = 0; i < riemann_attrs_num; i += 2)
+		riemann_event_add_attribute(event,
+					    riemann_attrs[i],
+					    riemann_attrs[i +1]);
 
 	for (i = 0; i < riemann_tags_num; i++)
 		riemann_event_add_tag (event, riemann_tags[i]);
@@ -763,6 +857,32 @@ riemann_config(oconfig_item_t *ci)
 
 		if (strcasecmp("Node", child->key) == 0) {
 			riemann_config_node (child);
+		} else if (strcasecmp(child->key, "attribute") == 0) {
+			char *key = NULL;
+			char *val = NULL;
+
+			if (child->values_num != 2) {
+				WARNING("riemann attributes need both a key and a value.");
+				return (-1);
+			}
+			if (child->values[0].type != OCONFIG_TYPE_STRING ||
+			    child->values[1].type != OCONFIG_TYPE_STRING) {
+				WARNING("riemann attribute needs string arguments.");
+				return (-1);
+			}
+			if ((key = strdup(child->values[0].value.string)) == NULL) {
+				WARNING("cannot allocate memory for attribute key.");
+				return (-1);
+			}
+			if ((val = strdup(child->values[1].value.string)) == NULL) {
+				WARNING("cannot allocate memory for attribute value.");
+				return (-1);
+			}
+			strarray_add(&riemann_attrs, &riemann_attrs_num, key);
+			strarray_add(&riemann_attrs, &riemann_attrs_num, val);
+			DEBUG("write_riemann: got attr: %s => %s", key, val);
+			sfree(key);
+			sfree(val);
 		} else if (strcasecmp(child->key, "tag") == 0) {
 			char *tmp = NULL;
 			status = cf_util_get_string(child, &tmp);
