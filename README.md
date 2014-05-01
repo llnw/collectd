@@ -82,3 +82,13 @@ Allow exec plugin to maintain root privileges.
 Adds a netstat plugin for FreeBSD and Linux.
 
 **Warning, breaks build unless configured with --enable-ipv6**
+
+##### F-METRICS-388-hiredis-5.4
+
+* From: https://github.com/collectd/collectd/pull/464
+* Issue: https://github.com/llnw/collectd/issues/6
+
+The bundled redis plugin uses a library that is not widely packaged.  This
+switches to hiredis.
+
+**Warning, write_redis may not be fully functional**
