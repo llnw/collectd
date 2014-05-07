@@ -92,3 +92,12 @@ The bundled redis plugin uses a library that is not widely packaged.  This
 switches to hiredis.
 
 **Warning, write_redis may not be fully functional**
+
+##### F-METRICS-389-graphite-forbidden-chars-5.4
+
+* From: backport of
+  https://github.com/collectd/collectd/commit/91bea05fe0a8fcad803e86e623783ca7aac1e380
+  and additional fix in https://github.com/llnw/collectd/issues/7
+* Issue: https://github.com/llnw/collectd/issues/7
+
+Graphite does not handle some characters in the metric names, filter them
