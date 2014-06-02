@@ -101,3 +101,9 @@ switches to hiredis.
 * Issue: https://github.com/llnw/collectd/issues/7
 
 Graphite does not handle some characters in the metric names, filter them
+
+##### F-METRICS-390-tsdb-tag-extractor-5.4
+
+* Issue: https://github.com/llnw/collectd/issues/10
+
+Adds a means of tagging metrics sent to TSDB using collectd filter chains.
